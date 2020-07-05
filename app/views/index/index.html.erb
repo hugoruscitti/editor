@@ -1,0 +1,64 @@
+<div class="flex vh-100 bg-black-70 white verdana overflow-hidden">
+
+    <div class="flex-grow-1 pa2 flex flex-column" data-controller="editor">
+      <div>
+        <%= render "boton", texto: "Resaltar linea 2", accion: "click->editor#resaltar" %>
+        <%= render "boton", texto: "Ocultar resaltado", accion: "click->editor#limpiarResaltado" %>
+        <%= render "boton", texto: "Ejecutar", accion: "click->editor#ejecutar" %>
+
+        <button type="button" data-action="click->editor#ast" data-solo-sentencias="false" class="bg-blue ma1 pulsable white br2 pa2 bn pointer">Obtener AST</button>
+        <button type="button" data-action="click->editor#ast" data-solo-sentencias="true" class="bg-blue ma1 pulsable white br2 pa2 bn pointer">Obtener AST (solo sentencias)</button>
+      </div>
+
+      <pre data-target="editor.consola" class="flex-grow-1 pa2 lh-copy bg-black overflow-y-scroll"></pre>
+    </div>
+
+    <div class="w1 bg-light-gray">
+    </div>
+
+    <div id="container" class="w-50 v-100"></div>
+
+</div>
+
+<script src="monaco-editor/min/vs/loader.js"></script>
+<script>
+  require.config({ paths: { 'vs': 'monaco-editor/min/vs' }});
+  require(['vs/editor/editor.main'], function() {
+    var editor = monaco.editor.create(document.getElementById('container'), {
+      value: `declare function print(nombre: string);
+print("paso 1");
+
+class Persona {
+  nombre: string;
+
+  constructor(nombre: string) {
+    this.nombre = nombre;
+  }
+
+  saludar() {
+    print("Hola " + this.nombre);
+  }
+}
+
+print("paso 2");
+
+let pepe = new Persona("pepe");
+pepe.saludar();
+
+print("paso 3");
+`.trim(),
+      theme: "vs-dark",
+      minimap: { enabled: false },
+      language: "typescript",
+      fontSize: 20,
+	    contextmenu: false,
+    });
+
+    window.onresize = function() {
+      editor.layout();
+    };
+
+    window.editor = editor;
+
+  });
+</script>

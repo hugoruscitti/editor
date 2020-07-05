@@ -1,0 +1,16 @@
+// Place all the styles related to the Index controller here.
+// They will automatically be included in application.css.
+// You can use Sass (SCSS) here: https://sass-lang.com/
+
+.verdana {
+  font-family: verdana;
+}
+
+.linea {
+  background: #4d469f;
+  border: 1px solid #312d65;
+}
+
+.pulsable:active {
+  transform: translateY(1px);
+}
