@@ -1,21 +1,22 @@
 import { Controller } from "stimulus";
 
 export default class extends Controller {
-  static targets = ["consola"];
+  static targets = ["consola", "botonDetener", "botonEjecutar"];
 
   connect() {
     this.decorations = [];
+    this.ejecutando = false;
 
     window.print = mensaje => {
       this.imprimirMensaje(mensaje);
     };
+
+    window.resaltarLinea = numero => {
+      this.resaltarLinea(numero);
+    };
   }
 
-  resaltar() {
-    this.restaltarLinea(2);
-  }
-
-  restaltarLinea(numero) {
+  resaltarLinea(numero) {
     var decorations = editor.deltaDecorations(this.decorations, [
       {
         range: new monaco.Range(numero, 1, numero, 1),
@@ -40,14 +41,53 @@ export default class extends Controller {
     ]);
   }
 
+  alternarBotones() {
+    this.botonEjecutarTarget.classList.toggle("dn");
+    this.botonDetenerTarget.classList.toggle("dn");
+  }
+
   ejecutar() {
+    this.ejecutando = true;
+    this.alternarBotones();
+
+    this.resaltarLinea(3);
+
     let código_ts = editor.getModel().getValue();
-    let código_javascript = ts.transpile(código_ts);
+
+    // versión sin instrumentar
+    // let código_javascript = ts.transpile(código_ts + "\n new Actor();");
+
+    //versión instrumentada
+    let código_instrumentado = this.instrumentar(código_ts + "\n new Actor();", true);
+    let código_javascript = ts.transpile(código_instrumentado);
+
+    // reemplaza la instrumentación de comentarios por llamadas a la función
+    // resaltarLinea.
+    código_javascript = código_javascript.replace(/\"\[linea:(\d+)\]\"/g, "resaltarLinea($1)");
 
     this.limpiarConsola();
     this.imprimirMensaje("Comenzando ejecución:");
 
-    eval(código_javascript);
+    let actor = eval(código_javascript);
+
+    actor.iniciar();
+
+    var actualizar_el_actor = () => {
+      if (this.ejecutando) {
+        actor.actualizar();
+        setTimeout(actualizar_el_actor, 1000);
+      }
+    };
+
+    setTimeout(actualizar_el_actor, 1000);
+  }
+
+  detener() {
+    this.ejecutando = false;
+    this.alternarBotones();
+    this.limpiarResaltado();
+
+    this.imprimirMensaje("Deteniendo");
   }
 
   limpiarConsola() {
@@ -70,7 +110,7 @@ export default class extends Controller {
     this.limpiarConsola();
 
     function esSentencia(nodo) {
-      return (ts.SyntaxKind[nodo.kind] === "ExpressionStatement");
+      return ts.SyntaxKind[nodo.kind] === "ExpressionStatement";
     }
 
     function convertirEnTexto(nodo, indent) {
@@ -89,11 +129,11 @@ export default class extends Controller {
       }
 
       if (soloSentencias) {
-        print(mensaje);
-      } else {
         if (esSentencia(nodo)) {
           print(mensaje);
         }
+      } else {
+        print(mensaje);
       }
 
       indent++;
@@ -102,5 +142,56 @@ export default class extends Controller {
     }
 
     recorrerNodo(raiz);
+  }
+
+  transformar() {
+    let código = editor.getModel().getValue();
+    let resultado = this.instrumentar(código, false);
+    const printer = ts.createPrinter();
+
+    this.limpiarConsola();
+    print(printer.printFile(resultado));
+  }
+
+  instrumentar(código, convertirElCódigoATexto) {
+    let sourceFile = ts.createSourceFile(
+      "codigo.ts",
+      código, // código
+      ts.ScriptTarget.ES2015,
+      true,
+      ts.ScriptKind.TS
+    );
+
+    const additionalSource = ts.createSourceFile(
+      "ownerCheck.js",
+      "resaltar_codigo();", // código
+      ts.ScriptTarget.ES5,
+      false,
+      ts.ScriptKind.JS
+    );
+
+    let transformer = context => rootNode => {
+      function visit(node) {
+        if (ts.isExpressionStatement(node)) {
+          let linea = sourceFile.getLineAndCharacterOfPosition(node.getStart()).line + 1;
+          let nuevo = ts.createExpressionStatement(ts.createLiteral(`[linea:${linea}]`));
+
+          return ts.createNodeArray([nuevo, node], false);
+        }
+
+        return ts.visitEachChild(node, visit, context);
+      }
+      return ts.visitNode(rootNode, visit);
+    };
+
+    const result = ts.transform(sourceFile, [transformer]);
+    const resultado = result.transformed[0];
+
+    if (convertirElCódigoATexto) {
+      const printer = ts.createPrinter();
+      return printer.printFile(resultado);
+    } else {
+      return resultado;
+    }
   }
 }
