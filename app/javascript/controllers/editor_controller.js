@@ -6,6 +6,7 @@ export default class extends Controller {
   connect() {
     this.decorations = [];
     this.ejecutando = false;
+    this.lineasParaResaltar = [];
 
     window.print = mensaje => {
       this.imprimirMensaje(mensaje);
@@ -17,21 +18,26 @@ export default class extends Controller {
   }
 
   resaltarLinea(numero) {
-    var decorations = editor.deltaDecorations(this.decorations, [
-      {
+    this.lineasParaResaltar.push(numero);
+  }
+
+  resaltarTodasLasLineasPlanificadas() {
+    let listado = this.lineasParaResaltar.map(numero => {
+      return {
         range: new monaco.Range(numero, 1, numero, 1),
         options: {
           isWholeLine: true,
           className: "linea"
         }
-      }
-    ]);
+      };
+    });
 
-    this.decorations = decorations;
+    this.decorations = editor.deltaDecorations(this.decorations, listado);
   }
 
   limpiarResaltado() {
     let rango = new monaco.Range(1, 1, 1, 1);
+    this.lineasParaResaltar = [];
 
     editor.deltaDecorations(this.decorations, [
       {
@@ -54,9 +60,6 @@ export default class extends Controller {
 
     let código_ts = editor.getModel().getValue();
 
-    // versión sin instrumentar
-    // let código_javascript = ts.transpile(código_ts + "\n new Actor();");
-
     //versión instrumentada
     let código_instrumentado = this.instrumentar(código_ts + "\n new Actor();", true);
     let código_javascript = ts.transpile(código_instrumentado);
@@ -71,10 +74,14 @@ export default class extends Controller {
     let actor = eval(código_javascript);
 
     actor.iniciar();
+    this.resaltarTodasLasLineasPlanificadas();
 
     var actualizar_el_actor = () => {
+      this.limpiarResaltado();
+
       if (this.ejecutando) {
         actor.actualizar();
+        this.resaltarTodasLasLineasPlanificadas();
         setTimeout(actualizar_el_actor, 1000);
       }
     };
