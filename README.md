@@ -8,7 +8,13 @@ pilas engine 2 (www.pilas-engine.com.ar)
 
 ## Como ejecutar en un entorno local
 
-Ten en cuenta tener estas versiones de dependencias:
+Existen dos formas, si utilizas docker ejecutá:
+
+```
+docker-compose up
+```
+
+Sino, podes levantar la aplicación usando estos comandos:
 
 ```
 → ruby -v
@@ -18,8 +24,9 @@ ruby 2.7.1p83
 Rails 6.0.3.2
 ```
 
-y luego ejecuta:
+y luego ejecutar:
 
 ```
+bundle install
 rails s
 ```
