@@ -64,10 +64,6 @@ export default class extends Controller {
     let código_instrumentado = this.instrumentar(código_ts + "\n new Actor();", true);
     let código_javascript = ts.transpile(código_instrumentado);
 
-    // reemplaza la instrumentación de comentarios por llamadas a la función
-    // resaltarLinea.
-    código_javascript = código_javascript.replace(/\"\[linea:(\d+)\]\"/g, "resaltarLinea($1)");
-
     this.limpiarConsola();
     this.imprimirMensaje("Comenzando ejecución:");
 
@@ -181,7 +177,10 @@ export default class extends Controller {
       function visit(node) {
         if (ts.isExpressionStatement(node)) {
           let linea = sourceFile.getLineAndCharacterOfPosition(node.getStart()).line + 1;
-          let nuevo = ts.createExpressionStatement(ts.createLiteral(`[linea:${linea}]`));
+
+          let funcion = ts.createIdentifier("resaltarLinea");
+          let params = [ts.createNumericLiteral(`${linea}`)];
+          let nuevo = ts.createExpressionStatement(ts.createCall(funcion, undefined, params));
 
           return ts.createNodeArray([nuevo, node], false);
         }

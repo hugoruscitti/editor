@@ -1,0 +1,2 @@
+ejecutar:
+	rails s
