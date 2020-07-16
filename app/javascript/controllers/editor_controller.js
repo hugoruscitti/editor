@@ -61,7 +61,9 @@ export default class extends Controller {
     let código_ts = editor.getModel().getValue();
 
     //versión instrumentada
-    let código_instrumentado = this.instrumentar(código_ts + "\n new Actor();", true);
+    let ast_instrumentado = this.instrumentar(código_ts + "\n new Actor();");
+    let código_instrumentado = this.convertirASTEnCódigo(ast_instrumentado);
+
     let código_javascript = ts.transpile(código_instrumentado);
 
     this.limpiarConsola();
@@ -85,6 +87,11 @@ export default class extends Controller {
     setTimeout(actualizar_el_actor, 1000);
   }
 
+  convertirASTEnCódigo(ast) {
+    const printer = ts.createPrinter();
+    return printer.printFile(ast);
+  }
+
   detener() {
     this.ejecutando = false;
     this.alternarBotones();
@@ -105,58 +112,16 @@ export default class extends Controller {
     }
   }
 
-  ast(event) {
-    let codigo = editor.getModel().getValue();
-    let raiz = ts.createSourceFile("codigo.js", codigo);
-    let soloSentencias = event.currentTarget.dataset.soloSentencias === "true";
-
-    this.limpiarConsola();
-
-    function esSentencia(nodo) {
-      return ts.SyntaxKind[nodo.kind] === "ExpressionStatement";
-    }
-
-    function convertirEnTexto(nodo, indent) {
-      return new Array(indent * 2 + 1).join(" ") + ts.SyntaxKind[nodo.kind];
-    }
-
-    let indent = 0;
-
-    function recorrerNodo(nodo) {
-      let mensaje = convertirEnTexto(nodo, indent);
-
-      if (esSentencia(nodo)) {
-        if (nodo.getText(raiz)) {
-          mensaje += `  →  ${nodo.getText(raiz)}`;
-        }
-      }
-
-      if (soloSentencias) {
-        if (esSentencia(nodo)) {
-          print(mensaje);
-        }
-      } else {
-        print(mensaje);
-      }
-
-      indent++;
-      ts.forEachChild(nodo, recorrerNodo);
-      indent--;
-    }
-
-    recorrerNodo(raiz);
-  }
-
   transformar() {
     let código = editor.getModel().getValue();
-    let resultado = this.instrumentar(código, false);
+    let resultado = this.instrumentar(código);
     const printer = ts.createPrinter();
 
     this.limpiarConsola();
     print(printer.printFile(resultado));
   }
 
-  instrumentar(código, convertirElCódigoATexto) {
+  instrumentar(código) {
     let sourceFile = ts.createSourceFile(
       "codigo.ts",
       código, // código
@@ -165,21 +130,13 @@ export default class extends Controller {
       ts.ScriptKind.TS
     );
 
-    const additionalSource = ts.createSourceFile(
-      "ownerCheck.js",
-      "resaltar_codigo();", // código
-      ts.ScriptTarget.ES5,
-      false,
-      ts.ScriptKind.JS
-    );
-
     let transformer = context => rootNode => {
       function visit(node) {
         if (ts.isExpressionStatement(node)) {
           let linea = sourceFile.getLineAndCharacterOfPosition(node.getStart()).line + 1;
 
           let funcion = ts.createIdentifier("resaltarLinea");
-          let params = [ts.createNumericLiteral(`${linea}`)];
+          let params = [ts.createNumericLiteral(`${linea}`), ts.createStringLiteral("codigo.ts")];
           let nuevo = ts.createExpressionStatement(ts.createCall(funcion, undefined, params));
 
           return ts.createNodeArray([nuevo, node], false);
@@ -193,11 +150,6 @@ export default class extends Controller {
     const result = ts.transform(sourceFile, [transformer]);
     const resultado = result.transformed[0];
 
-    if (convertirElCódigoATexto) {
-      const printer = ts.createPrinter();
-      return printer.printFile(resultado);
-    } else {
-      return resultado;
-    }
+    return resultado;
   }
 }
