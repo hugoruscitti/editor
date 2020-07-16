@@ -1,0 +1,68 @@
+<!DOCTYPE html>
+<html>
+
+  <head>
+    <title>Editor</title>
+    <meta charset="UTF-8">
+    <script src="typescript/typescript.js" charset="utf-8"></script>
+    <link rel="stylesheet" href="css/tachyons.css">
+    <link rel="stylesheet" href="css/index.css">
+
+    <script src="stimulus.js"></script>
+
+    <script src="editor_controller.js" charset="utf-8"></script>
+
+    <script src="monaco-editor/min/vs/loader.js"></script>
+    <script src="monaco_controller.js" charset="utf-8"></script>
+    <script>
+      (() => {
+        const application = Stimulus.Application.start()
+
+        application.register("editor", EditorController);
+        application.register("monaco", MonacoController);
+      })();
+    </script>
+  </head>
+
+  <body>
+
+    <div class="flex vh-100 bg-black-70 white verdana overflow-hidden">
+
+        <div class="flex-grow-1 pa2 flex flex-column" data-controller="editor">
+          <div>
+
+            <button
+              type="button"
+              id="ejecutar"
+              data-action="click->editor#ejecutar"
+              data-target="editor.botonEjecutar"
+              class="bg-blue ma1 pulsable white br2 pa2 bn pointer">► Ejecutar</button>
+
+            <button
+              type="button"
+              id="ejecutar"
+              data-action="click->editor#detener"
+              data-target="editor.botonDetener"
+              class="bg-blue ma1 pulsable white br2 pa2 bn pointer dn">✖ Detener</button>
+
+            <button
+              type="button"
+              data-action="click->editor#transformar"
+              class="bg-blue ma1 pulsable white br2 pa2 bn pointer">Generar AST e instrumentar</button>
+
+          </div>
+
+          <pre
+            data-target="editor.consola"
+            class="flex-grow-1 pa2 lh-copy bg-black overflow-y-scroll"></pre>
+        </div>
+
+        <div class="w1 bg-light-gray">
+        </div>
+
+        <div data-controller="monaco" id="container" class="w-50 v-100"></div>
+
+    </div>
+
+  </body>
+</html>

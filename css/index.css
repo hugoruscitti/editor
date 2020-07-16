@@ -1,0 +1,13 @@
+
+.verdana {
+  font-family: verdana;
+}
+
+.linea {
+  background: #4d469f;
+  border: 1px solid #312d65;
+}
+
+.pulsable:active {
+  transform: translateY(1px);
+}
